@@ -13,6 +13,7 @@ class FlowHead(nn.Module):
     def forward(self, x):
         return self.conv2(self.relu(self.conv1(x)))
 
+
 class ConvGRU(nn.Module):
     def __init__(self, hidden_dim=128, input_dim=192+128):
         super(ConvGRU, self).__init__()
@@ -30,34 +31,35 @@ class ConvGRU(nn.Module):
         h = (1-z) * h + z * q
         return h
 
+
 class SepConvGRU(nn.Module):
     def __init__(self, hidden_dim=128, input_dim=192+128):
         super(SepConvGRU, self).__init__()
-        self.convz1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1,5), padding=(0,2))
-        self.convr1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1,5), padding=(0,2))
-        self.convq1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1,5), padding=(0,2))
+        self.convz1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1, 5), padding=(0, 2))
+        self.convr1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1, 5), padding=(0, 2))
+        self.convq1 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (1, 5), padding=(0, 2))
 
-        self.convz2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5,1), padding=(2,0))
-        self.convr2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5,1), padding=(2,0))
-        self.convq2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5,1), padding=(2,0))
-
+        self.convz2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5, 1), padding=(2, 0))
+        self.convr2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5, 1), padding=(2, 0))
+        self.convq2 = nn.Conv2d(hidden_dim+input_dim, hidden_dim, (5, 1), padding=(2, 0))
 
     def forward(self, h, x):
         # horizontal
         hx = torch.cat([h, x], dim=1)
         z = torch.sigmoid(self.convz1(hx))
         r = torch.sigmoid(self.convr1(hx))
-        q = torch.tanh(self.convq1(torch.cat([r*h, x], dim=1)))        
+        q = torch.tanh(self.convq1(torch.cat([r*h, x], dim=1)))
         h = (1-z) * h + z * q
 
         # vertical
         hx = torch.cat([h, x], dim=1)
         z = torch.sigmoid(self.convz2(hx))
         r = torch.sigmoid(self.convr2(hx))
-        q = torch.tanh(self.convq2(torch.cat([r*h, x], dim=1)))       
+        q = torch.tanh(self.convq2(torch.cat([r*h, x], dim=1)))
         h = (1-z) * h + z * q
 
         return h
+
 
 class SmallMotionEncoder(nn.Module):
     def __init__(self, args):
@@ -75,6 +77,7 @@ class SmallMotionEncoder(nn.Module):
         cor_flo = torch.cat([cor, flo], dim=1)
         out = F.relu(self.conv(cor_flo))
         return torch.cat([out, flow], dim=1)
+
 
 class BasicMotionEncoder(nn.Module):
     def __init__(self, args):
@@ -96,6 +99,7 @@ class BasicMotionEncoder(nn.Module):
         out = F.relu(self.conv(cor_flo))
         return torch.cat([out, flow], dim=1)
 
+
 class SmallUpdateBlock(nn.Module):
     def __init__(self, args, hidden_dim=96):
         super(SmallUpdateBlock, self).__init__()
@@ -110,6 +114,7 @@ class SmallUpdateBlock(nn.Module):
         delta_flow = self.flow_head(net)
 
         return net, None, delta_flow
+
 
 class BasicUpdateBlock(nn.Module):
     def __init__(self, args, hidden_dim=128, input_dim=128):
@@ -134,6 +139,3 @@ class BasicUpdateBlock(nn.Module):
         # scale mask to balence gradients
         mask = .25 * self.mask(net)
         return net, mask, delta_flow
-
-
-
