@@ -1,3 +1,4 @@
+import time
 import torch.nn.functional as F
 import kornia.geometry as geometry
 import sys
@@ -18,7 +19,10 @@ DEVICE = 'cuda'
 
 def load_image(imfile):
     img = np.array(Image.open(imfile)).astype(np.uint8)
-    img = torch.from_numpy(img).permute(2, 0, 1).float()
+    img = torch.from_numpy(img)
+    if len(img.shape) == 2:
+        img = img.unsqueeze(2).repeat(1, 1, 3)
+    img = img.permute(2, 0, 1).float()
     return img[None].to(DEVICE)
 
 
@@ -56,7 +60,8 @@ def demo(args):
 
     with torch.no_grad():
         images = glob.glob(os.path.join(args.path, '*.png')) + \
-            glob.glob(os.path.join(args.path, '*.jpg'))
+            glob.glob(os.path.join(args.path, '*.jpg')) + \
+            glob.glob(os.path.join(args.path, '*.tiff'))
 
         images = sorted(images)
         for imfile1, imfile2 in zip(images[:-1], images[1:]):
@@ -66,8 +71,10 @@ def demo(args):
             padder = InputPadder(image1.shape)
             image1, image2 = padder.pad(image1, image2)
 
-            flow_low, flow_up = model(image1, image2, iters=20, test_mode=True)
-
+            t1 = time.perf_counter()
+            flow_low, flow_up = model(image1, image2, iters=5, test_mode=True)
+            t2 = time.perf_counter()
+            print("Time: ", t2 - t1)
             ############
             height, width = image1.shape[-2:]
             grid = geometry.create_meshgrid(height, width, normalized_coordinates=False).to(image1.device)
